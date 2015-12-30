@@ -1,0 +1,38 @@
+---
+  - hosts: localhost
+    sudo: yes
+
+    vars:
+      - script_dir: "/root/backup"
+      - script_main: "{{ script_dir }}/make_snapshot.sh"
+      - script_hourly: "{{ script_dir }}/make_snapshot_hourly.sh"
+      - script_daily: "{{ script_dir }}/make_snapshot_daily.sh"
+      - script_weekly: "{{ script_dir }}/make_snapshot_weekly.sh"
+      - script_monthly: "{{ script_dir }}/make_snapshot_monthly.sh"
+      - exclude_file: "{{ script_dir }}/exclude.txt"
+      - backup_name: "dx5-biotek4"
+      - backup_drive_uuid: 9be50e2d-5087-4072-90d3-db0b7188b24d
+      - backup_mount_point: "/snapshot-backups-usb"
+      - keep_hourly: "12"
+      - keep_daily: "7"
+      - keep_weekly: "5"
+      - keep_monthly: "12"
+
+    tasks:
+      - name: create script directory
+        file: path={{ script_dir }} state=directory
+      - name: copy main backup script
+        copy: src=files/make_snapshot.sh dest={{ script_main }} mode=0700 owner=root
+      - name: copy exclude file
+        copy: src=files/exclude.txt dest={{ exclude_file }} mode=0644 owner=root
+      - name: template hourly backup script
+        template: src=make_snapshot_hourly.sh dest={{ script_hourly }} mode=0700 owner=root
+      - name: template daily backup script
+        template: src=make_snapshot_daily.sh dest={{ script_daily }} mode=0700 owner=root
+
+      - name: create daily backup job
+        cron: name="daily backup" minute="23" hour="23" job="{{ script_daily }}"
+      - name: create weekly backup job
+        cron: name="weekly backup" minute="43" hour="22" weekday="4" job="{{ script_weekly }}"
+      - name: create monthly backup job
+        cron: name="monthly backup" minute="43" hour="22" day="1-7" job="[ \"$(date '+\%a')\" = \"Wed\" ] && {{ script_monthly }}"
