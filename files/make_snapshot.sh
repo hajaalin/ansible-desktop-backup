@@ -211,6 +211,17 @@ if [ ! -d $MOUNT_POINT_RW ] ; then
 fi
 
 ##############################################################################
+# check that device is or can be mounted the mount point
+#
+
+/bin/egrep -q "^$MOUNT_DEVICE" /proc/mounts | /bin/egrep -q $MOUNT_POINT_RW || $MOUNT -t ext2 -o ro $MOUNT_DEVICE $MOUNT_POINT_RW
+
+if (( $? )); then
+    $ECHO Error: could not mount $MOUNT_DEVICE to $MOUNT_POINT_RW ;
+    exit ;
+fi
+
+##############################################################################
 # attempt to remount the RW mount point as RW; else abort
 #
 
