@@ -275,7 +275,7 @@ fi
 
 if [ ! -d $MOUNT_POINT_RW/$DESTINATION_DIR/ ] ; then
     if [ -e $MOUNT_POINT_RW/$DESTINATION_DIR/ ] ; then
-        ECHO Error: $MOUNT_POINT_RW/$DESTINATION_DIR/ isn\'t a directory. Exiting ;
+        $ECHO Error: $MOUNT_POINT_RW/$DESTINATION_DIR/ isn\'t a directory. Exiting ;
         safe_exit ;
     fi
     $ECHO Notice: $MOUNT_POINT_RW/$DESTINATION_DIR/ don\'t exist. Creating... ;
