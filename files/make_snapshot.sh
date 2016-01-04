@@ -171,8 +171,8 @@ fi
 
 MOUNT_DEVICE_UUID=$1;
 MOUNT_POINT_RW=$2;
-SOURCE_DIR=$3;
-
+SOURCE_DIRS=$(echo $3 | tr , " ")
+#echo $SOURCE_DIRS
 
 ##############################################################################
 # make sure we're running as root
@@ -235,10 +235,13 @@ fi
 # continue check the arguments and the options
 #
 
-if [ ! -d $SOURCE_DIR ] ; then
+for SOURCE_DIR in $SOURCE_DIRS; do
+  #echo $SOURCE_DIR
+  if [ ! -d $SOURCE_DIR ] ; then
     $ECHO $SOURCE_DIR isn\'t a valid directory. Exiting... ;
     exit ;
-fi
+  fi
+done
 
 ##############################################################################
 # setting optionals settings
@@ -328,12 +331,13 @@ fi
 # is unlinked first.  If it were not so, this would copy over the other
 # snapshot(s) too!
 #
+for SOURCE_DIR in $SOURCE_DIRS; do
 $RSYNC \
     -va --delete --delete-excluded \
     -q --one-file-system \
     $EXCLUDE_LINE \
     $SOURCE_DIR $MOUNT_POINT_RW/$DESTINATION_DIR/$BACKUP_NAME.0 ;
-
+done
 
 ##############################################################################
 # update the mtime of $BACKUP_NAME.0 to reflect the snapshot time

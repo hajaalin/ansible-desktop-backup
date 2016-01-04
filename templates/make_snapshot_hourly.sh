@@ -3,7 +3,7 @@
 # hourly backup of /home
 ionice -c 3 {{ script_main }} \
 {{ backup_drive_uuid }} {{ backup_mount_point }} \
-/home \
+/home,/ \
 -d {{ backup_name }} \
 -N hourly \
 -l {{ keep_hourly }} \
