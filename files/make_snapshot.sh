@@ -52,6 +52,22 @@ TOUCH=/bin/touch;
 
 RSYNC=/usr/bin/rsync;
 
+
+##############################################################################
+# remount device read-only before exiting
+#
+
+function safe_exit() {
+  $MOUNT -o remount,ro $MOUNT_DEVICE $MOUNT_POINT_RW ;
+  if (( $? )); then
+      $ECHO safe_exit: Error: could not remount $MOUNT_POINT_RW readonly ;
+      exit 1 ;
+  fi
+
+  exit 0 ;
+}
+
+
 ##############################################################################
 # check if arguments are given
 #
@@ -239,7 +255,7 @@ for SOURCE_DIR in $SOURCE_DIRS; do
   #echo $SOURCE_DIR
   if [ ! -d $SOURCE_DIR ] ; then
     $ECHO $SOURCE_DIR isn\'t a valid directory. Exiting... ;
-    exit ;
+    safe_exit ;
   fi
 done
 
@@ -253,14 +269,14 @@ fi
 
 if [ ! -z $($ECHO $BACKUP_NAME | $GREP "\/" ) ] ; then
     $ECHO Error: backup_name: $BACKUP_NAME can\'t be a subdirectory ;
-    exit;
+    safe_exit;
 fi
 
 
 if [ ! -d $MOUNT_POINT_RW/$DESTINATION_DIR/ ] ; then
     if [ -e $MOUNT_POINT_RW/$DESTINATION_DIR/ ] ; then
         ECHO Error: $MOUNT_POINT_RW/$DESTINATION_DIR/ isn\'t a directory. Exiting ;
-        exit ;
+        safe_exit ;
     fi
     $ECHO Notice: $MOUNT_POINT_RW/$DESTINATION_DIR/ don\'t exist. Creating... ;
     mkdir -p -m 755 $MOUNT_POINT_RW/$DESTINATION_DIR/ ;
@@ -321,7 +337,7 @@ if [ ! -z $EXCLUDE_FILE ] ; then
         EXCLUDE_LINE="--exclude-from=$EXCLUDE_FILE" ;
     else
         $ECHO Error: $EXCLUDE_FILE isn\'t a valid file. Exiting. ;
-        exit;
+        safe_exit;
     fi
 fi
 
@@ -356,11 +372,7 @@ wait ;
 # remount the RW snapshot mountpoint as readonly
 #
 
-$MOUNT -o remount,ro $MOUNT_DEVICE $MOUNT_POINT_RW ;
-if (( $? )); then
-    $ECHO Error: could not remount $MOUNT_POINT_RW readonly ;
-    exit ;
-fi
+safe_exit ;
 
 
 #
