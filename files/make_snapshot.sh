@@ -43,12 +43,15 @@ ECHO=/bin/echo;
 SEQ=/usr/bin/seq;
 GETOPT=/usr/bin/getopt;
 GREP=/bin/grep;
+EGREP=/bin/egrep;
+MKDIR=/bin/mkdir
 
 MOUNT=/bin/mount;
 RM=/bin/rm;
 MV=/bin/mv;
 CP=/bin/cp;
 TOUCH=/bin/touch;
+BLKID=/sbin/blkid
 
 RSYNC=/usr/bin/rsync;
 
@@ -81,7 +84,7 @@ fi
 # parsing arguments and options
 #
 
-TEMP=`$GETOPT -o h::d:N:l:f: -- "$@"`
+TEMP=`$GETOPT -o h::d:N:O:l:f: -- "$@"`
 
 if [ $? != 0 ] ; then
     $ECHO Error parsing arguments and options ;
@@ -98,6 +101,9 @@ while true ; do
            shift 2 ;;
         -N) BACKUP_NAME="$2";
            shift 2;;
+        -O) BACKUP_NAME_ORIG="$2";
+           shift 2 ;;
+
         -l) case $2 in
                [0-9]*) BACKUP_NUMBER="$2";
                        if [ $BACKUP_NUMBER -lt 2 ] ; then
@@ -123,9 +129,12 @@ Explanation:
  mount_point:      a valid mount point
  source_dir:       the directory to bakup
 
- destination_dir: a optional destination dir, default it is unset
-                    (starting from the mount_point)
- backup_name:       a name for the backup, default BACKUP
+ destination_dir:  a optional destination dir, default it is unset
+                   (starting from the mount_point)
+ backup_name:      a name for the backup, default BACKUP
+ backup_name_original:       the name of the existing backup that is being
+                             stored under different name, e.g. hourly
+
  backup_level:      the number of backups to preseve, default 5, min 2
  exclude_file:     a file for rsync --exclude-from, default it is unset
 
@@ -134,6 +143,7 @@ Example:
  make_snapshot.bash /dev/hdd15 /root/backup /home/;
  make_snapshot.bash /dev/hdd15 /root/backup /home/ -d home;
  make_snapshot.bash /dev/hdd15 /root/backup /home/ -d home -N daily
+ make_snapshot.bash /dev/hdd15 /root/backup /home/ -d home -N daily -O hourly
  make_snapshot.bash /dev/hdd15 /root/backup /home/ -d home -N daily -l 10;
  make_snapshot.bash /dev/hdd15 /root/backup /home/ -d home -N daily -l 10 \\
      -f /root/make_snapshot_exclude
@@ -194,17 +204,17 @@ SOURCE_DIRS=$(echo $3 | tr , " ")
 # make sure we're running as root
 #
 
-if (( `$ID -u` != 0 )); then
-    $ECHO Error: must be root. Exiting... ;
-    exit;
-fi
-
+# if (( `$ID -u` != 0 )); then
+#     $ECHO Error: must be root. Exiting... ;
+#     exit;
+# fi
+#
 
 ##############################################################################
 # check the arguments and the options
 #
 
-MOUNT_DEVICE=`blkid | egrep $MOUNT_DEVICE_UUID |cut -d: -f1`
+MOUNT_DEVICE=`$BLKID | $EGREP $MOUNT_DEVICE_UUID |cut -d: -f1`
 #echo MOUNT_DEVICE $MOUNT_DEVICE
 if [ -z $MOUNT_DEVICE ] ; then
   $ECHO Error: "Didn't find device corresponding to $MOUNT_DEVICE_UUID."
@@ -223,13 +233,13 @@ if [ ! -d $MOUNT_POINT_RW ] ; then
         exit ;
     fi
     $ECHO Notice: $MOUNT_POINT_RW don\'t exist. Creating... ;
-    mkdir -p -m 755 $MOUNT_POINT_RW ;
+    $MKDIR -p -m 755 $MOUNT_POINT_RW ;
 fi
 
 ##############################################################################
 # check that device is or can be mounted the mount point
 #
-/bin/egrep "^$MOUNT_DEVICE" /proc/mounts | /bin/egrep -q "$MOUNT_POINT_RW" || $MOUNT -t ext2 -o ro $MOUNT_DEVICE $MOUNT_POINT_RW
+$EGREP "^$MOUNT_DEVICE" /proc/mounts | $EGREP -q "$MOUNT_POINT_RW" || $MOUNT -t ext2 -o ro $MOUNT_DEVICE $MOUNT_POINT_RW
 
 if (( $? )); then
     $ECHO Error: could not mount $MOUNT_DEVICE to $MOUNT_POINT_RW ;
@@ -279,7 +289,7 @@ if [ ! -d $MOUNT_POINT_RW/$DESTINATION_DIR/ ] ; then
         safe_exit ;
     fi
     $ECHO Notice: $MOUNT_POINT_RW/$DESTINATION_DIR/ don\'t exist. Creating... ;
-    mkdir -p -m 755 $MOUNT_POINT_RW/$DESTINATION_DIR/ ;
+    $MKDIR -p -m 755 $MOUNT_POINT_RW/$DESTINATION_DIR/ ;
 fi
 
 
@@ -289,6 +299,35 @@ fi
 
 if [ -z "$BACKUP_NUMBER" ] ; then
     BACKUP_NUMBER=5;
+fi
+
+##############################################################################
+# $EXCLUDE_FILE is an optional
+#
+
+if [ ! -z $EXCLUDE_FILE ] ; then
+    if [ -f $EXCLUDE_FILE ] ; then
+        EXCLUDE_LINE="--exclude-from=$EXCLUDE_FILE" ;
+    else
+        $ECHO Error: $EXCLUDE_FILE isn\'t a valid file. Exiting. ;
+        safe_exit;
+    fi
+fi
+
+##############################################################################
+# if this is set, only copy an existing snapshot, no rsync.
+# but first check that the snapshot exists.
+#
+
+if [ ! -z $BACKUP_NAME_ORIG ] ; then
+  if [ $BACKUP_NAME = $BACKUP_NAME_ORIG ] ; then
+    $ECHO Error: backup_name is same as backup_name_orig. Exiting... ;
+    safe_exit ;
+  fi
+  if [ ! -d $MOUNT_POINT_RW/$DESTINATION_DIR/$BACKUP_NAME_ORIG.0 ] ; then
+    $ECHO Error: snapshot $MOUNT_POINT_RW/$DESTINATION_DIR/$BACKUP_NAME_ORIG.0 doesn\'t exist. Exiting... ;
+    safe_exit ;
+  fi
 fi
 
 
@@ -318,6 +357,36 @@ done
 
 
 ##############################################################################
+# only copy an existing snapshot (e.g. hourly to daily)
+#
+
+if [ ! -z $BACKUP_NAME_ORIG ] ; then
+
+  ############################################################################
+  # first rotate also level 0 to level 1
+  if [ -d $MOUNT_POINT_RW/$DESTINATION_DIR/$BACKUP_NAME.0 ] ; then
+      $MV $MOUNT_POINT_RW/$DESTINATION_DIR/$BACKUP_NAME.0 \
+          $MOUNT_POINT_RW/$DESTINATION_DIR/$BACKUP_NAME.1 ;
+  fi
+
+  ##############################################################################
+  # then make a hard-link-only (except for dirs) copy of the latest original snapshot.
+  # we checked earlier that it exists.
+  $CP -al $MOUNT_POINT_RW/$DESTINATION_DIR/$BACKUP_NAME_ORIG.0 \
+      $MOUNT_POINT_RW/$DESTINATION_DIR/$BACKUP_NAME.0 ;
+  if (( $? )); then
+    $ECHO Error: failed to copy $MOUNT_POINT_RW/$DESTINATION_DIR/$BACKUP_NAME_ORIG.0 to $MOUNT_POINT_RW/$DESTINATION_DIR/$BACKUP_NAME.0 ;
+    safe_exit ;
+  fi
+
+
+##############################################################################
+# make a fresh snapshot with rsync
+#
+
+else
+
+##############################################################################
 # make a hard-link-only (except for dirs) copy of the latest snapshot,
 # if that exists
 #
@@ -328,18 +397,6 @@ if [ -d $MOUNT_POINT_RW/$DESTINATION_DIR/$BACKUP_NAME.0 ] ; then
 fi
 
 
-##############################################################################
-# $EXCLUDE_FILE is an optional
-#
-
-if [ ! -z $EXCLUDE_FILE ] ; then
-    if [ -f $EXCLUDE_FILE ] ; then
-        EXCLUDE_LINE="--exclude-from=$EXCLUDE_FILE" ;
-    else
-        $ECHO Error: $EXCLUDE_FILE isn\'t a valid file. Exiting. ;
-        safe_exit;
-    fi
-fi
 
 ##############################################################################
 # rsync from the system into the latest snapshot (notice that
@@ -354,6 +411,8 @@ $RSYNC \
     $EXCLUDE_LINE \
     $SOURCE_DIR $MOUNT_POINT_RW/$DESTINATION_DIR/$BACKUP_NAME.0 ;
 done
+
+fi
 
 ##############################################################################
 # update the mtime of $BACKUP_NAME.0 to reflect the snapshot time
