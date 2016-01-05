@@ -1,14 +1,14 @@
 #!/bin/bash
 
 
-# weekly copy of hourly.0 to weekly.0
+# montly copy of hourly.0 to monthly.0
 ionice -c 3 {{ script_main }} \
 {{ backup_drive_uuid }} {{ backup_mount_point }} \
 /home,/ \
 -d {{ backup_name }} \
--N weekly \
+-N monthly \
 -O hourly \
--l {{ keep_weekly }} \
+-l {{ keep_monthly }} \
 -f {{ exclude_file }}
 
 # This is to drive user applications back out of swap after backup.
