@@ -1,20 +1,12 @@
 #!/bin/bash
 
-# daily backup of /home
+# daily copy of hourly.0 to daily.0
 ionice -c 3 {{ script_main }} \
 {{ backup_drive_uuid }} {{ backup_mount_point }} \
-/home/ \
+/home,/ \
 -d {{ backup_name }} \
 -N daily \
--l {{ keep_daily }} \
--f {{ exclude_file }}
-
-# daily backup of /
-ionice -c 3 {{ script_main }} \
-{{ backup_drive_uuid }} {{ backup_mount_point }} \
-/ \
--d {{ backup_name }} \
--N daily \
+-O hourly \
 -l {{ keep_daily }} \
 -f {{ exclude_file }}
 
