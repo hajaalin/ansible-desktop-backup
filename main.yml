@@ -17,6 +17,7 @@
       - keep_daily: "7"
       - keep_weekly: "5"
       - keep_monthly: "12"
+      - backup_log: "/var/log/snapshot-backups.log"
 
     tasks:
       - name: create script directory
@@ -30,9 +31,11 @@
       - name: template daily backup script
         template: src=make_snapshot_daily.sh dest={{ script_daily }} mode=0700 owner=root
 
+      - name: create hourly backup job
+        cron: name="hourly backup" minute="20" job="{{ script_hourly }} >> {{ backup_log }} 2>&1"
       - name: create daily backup job
-        cron: name="daily backup" minute="23" hour="23" job="{{ script_daily }}"
+        cron: name="daily backup" minute="23" hour="23" job="{{ script_daily }} >> {{ backup_log }} 2>&1"
       - name: create weekly backup job
-        cron: name="weekly backup" minute="43" hour="22" weekday="4" job="{{ script_weekly }}"
+        cron: name="weekly backup" minute="43" hour="22" weekday="4" job="{{ script_weekly }} >> {{ backup_log }} 2>&1"
       - name: create monthly backup job
-        cron: name="monthly backup" minute="43" hour="22" day="1-7" job="[ \"$(date '+\%a')\" = \"Wed\" ] && {{ script_monthly }}"
+        cron: name="monthly backup" minute="43" hour="22" day="1-7" job="[ \"$(date '+\%a')\" = \"Wed\" ] && {{ script_monthly }} >> {{ backup_log }} 2>&1"
