@@ -32,10 +32,10 @@
         template: src=make_snapshot_daily.sh dest={{ script_daily }} mode=0700 owner=root
 
       - name: create hourly backup job
-        cron: name="hourly backup" minute="20" job="{{ script_hourly }} >> {{ backup_log }} 2>&1"
+        cron: name="hourly backup" minute="3" job="{{ script_hourly }} >> {{ backup_log }} 2>&1"
       - name: create daily backup job
-        cron: name="daily backup" minute="23" hour="23" job="{{ script_daily }} >> {{ backup_log }} 2>&1"
+        cron: name="daily backup" minute="23" hour="21" job="{{ script_daily }} >> {{ backup_log }} 2>&1"
       - name: create weekly backup job
-        cron: name="weekly backup" minute="43" hour="22" weekday="4" job="{{ script_weekly }} >> {{ backup_log }} 2>&1"
+        cron: name="weekly backup" minute="33" hour="22" weekday="4" job="{{ script_weekly }} >> {{ backup_log }} 2>&1"
       - name: create monthly backup job
-        cron: name="monthly backup" minute="43" hour="22" day="1-7" job="[ \"$(date '+\%a')\" = \"Wed\" ] && {{ script_monthly }} >> {{ backup_log }} 2>&1"
+        cron: name="monthly backup" minute="43" hour="23" day="1-7" job="[ \"$(date '+\%a')\" = \"Wed\" ] && {{ script_monthly }} >> {{ backup_log }} 2>&1"
