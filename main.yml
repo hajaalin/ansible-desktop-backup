@@ -26,6 +26,8 @@
       #  apt: name=rsnapshot state=present
       - name: template rsnapshot config
         template: src=templates/rsnapshot.conf dest=/etc/rsnapshot.conf backup=yes
+      - name: copy exclude file
+        copy: src=files/exclude.txt dest={{ exclude_file }} backup=yes
 
       - name: create script directory
         file: path={{ script_dir }} state=directory
