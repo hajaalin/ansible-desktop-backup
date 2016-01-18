@@ -46,7 +46,7 @@
         template: src=templates/swapoff_swapon.sh dest={{ script_swapoff_swapon }} mode=0700 owner=root
 
       - name: create hourly backup job
-        cron: name="hourly backup" minute="3" hour="*/4" job="{{ script_hourly }} >> {{ backup_log }} 2>&1"
+        cron: name="hourly backup" minute="3" hour="11,13,15,17,19,21" job="{{ script_hourly }} >> {{ backup_log }} 2>&1"
       - name: create daily backup job
         cron: name="daily backup" minute="50" hour="21" job="{{ script_daily }} >> {{ backup_log }} 2>&1"
       - name: create weekly backup job
