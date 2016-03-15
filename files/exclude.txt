@@ -1,4 +1,4 @@
 .gvfs
 /home/hajaalin/VirtualBox VMs
 /home/hajaalin/tmp
-
+/home/hajaalin/.docker/machine/cache
