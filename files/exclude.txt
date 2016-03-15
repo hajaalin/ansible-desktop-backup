@@ -1,2 +1,4 @@
 .gvfs
 /home/hajaalin/VirtualBox VMs
+/home/hajaalin/tmp
+
